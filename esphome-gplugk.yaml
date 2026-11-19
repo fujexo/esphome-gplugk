@@ -1,0 +1,313 @@
+# Smart Meter gPlugK Firmware
+# 
+# * https://gplug.ch/installationsanleitung/gplugk-v2/
+# * https://esphome.io/components/sensor/dlms_meter/
+# * https://github.com/jluthiger/esphome-gplugk/tree/main
+
+esphome:
+  name: gplugk-eg
+  friendly_name: gPlugK EG
+
+esp32:
+  variant: esp32c3
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "<api_encryption_key>"
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+uart:
+  - baud_rate: 2400
+    rx_pin: GPIO4
+    rx_buffer_size: 1024
+
+# Green LED on GPIO6: blinks 1 s when UART data is received
+output:
+  - platform: gpio
+    pin: GPIO6
+    id: green_led_output
+
+light:
+  - platform: binary
+    name: "Data Received LED"
+    id: green_led
+    output: green_led_output
+
+script:
+  - id: blink_led
+    mode: restart
+    then:
+      - light.turn_on: green_led
+      - delay: 1s
+      - light.turn_off: green_led
+    
+dlms_meter:
+  decryption_key: "<decryption_key>"
+  #auth_key: "<optional_auth_key>"
+
+# https://www.bkw.ch/fileadmin/user_upload/03_Energie/03_04_Stromnetz/Smart-Meter/BKW_Smart_Meter_Kamstrup_OMNIPOWER_R__Information_Kundenschnittstelle__KS2_.pdf
+sensor:
+  # ---------- Energie ----------
+  - platform: dlms_meter
+    obis_code: "1.1.1.8.0.255"
+    name: "Energy Consumed"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+    on_value:
+        then:
+          - script.execute: blink_led
+
+  - platform: dlms_meter
+    obis_code: "1.1.2.8.0.255"
+    name: "Energy Returned"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.3.8.0.255"
+    name: "Reactive Energy +R"
+    unit_of_measurement: "varh"
+    accuracy_decimals: 3
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.4.8.0.255"
+    name: "Reactive Energy -R"
+    unit_of_measurement: "varh"
+    accuracy_decimals: 3
+    state_class: total_increasing
+
+  # ---------- Energie pro Phase ----------
+  - platform: dlms_meter
+    obis_code: "1.1.21.8.0.255"
+    name: "Energy Consumed L1"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.41.8.0.255"
+    name: "Energy Consumed L2"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.61.8.0.255"
+    name: "Energy Consumed L3"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.22.8.0.255"
+    name: "Energy Returned L1"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.42.8.0.255"
+    name: "Energy Returned L2"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  - platform: dlms_meter
+    obis_code: "1.1.62.8.0.255"
+    name: "Energy Returned L3"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+
+  # ---------- Leistung gesamt ----------
+  - platform: dlms_meter
+    obis_code: "1.1.1.7.0.255"
+    name: "Power Consumed"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.2.7.0.255"
+    name: "Power Returned"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.3.7.0.255"
+    name: "Reactive Power +R"
+    unit_of_measurement: "var"
+    accuracy_decimals: 0
+    device_class: reactive_power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.4.7.0.255"
+    name: "Reactive Power -R"
+    unit_of_measurement: "var"
+    accuracy_decimals: 0
+    device_class: reactive_power
+    state_class: measurement
+
+  # ---------- Leistung pro Phase ----------
+  - platform: dlms_meter
+    obis_code: "1.1.21.7.0.255"
+    name: "Power Consumed L1"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.41.7.0.255"
+    name: "Power Consumed L2"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.61.7.0.255"
+    name: "Power Consumed L3"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.22.7.0.255"
+    name: "Power Returned L1"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.42.7.0.255"
+    name: "Power Returned L2"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.62.7.0.255"
+    name: "Power Returned L3"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+
+  # ---------- Spannung ----------
+  - platform: dlms_meter
+    obis_code: "1.1.32.7.0.255"
+    name: "Voltage L1"
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    device_class: voltage
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.52.7.0.255"
+    name: "Voltage L2"
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    device_class: voltage
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.72.7.0.255"
+    name: "Voltage L3"
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    device_class: voltage
+    state_class: measurement
+
+  # ---------- Strom ----------
+  - platform: dlms_meter
+    obis_code: "1.1.31.7.0.255"
+    name: "Current L1"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    device_class: current
+    state_class: measurement
+    filters:
+      multiply: 0.01
+
+  - platform: dlms_meter
+    obis_code: "1.1.51.7.0.255"
+    name: "Current L2"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    device_class: current
+    state_class: measurement
+    filters:
+      multiply: 0.01
+
+  - platform: dlms_meter
+    obis_code: "1.1.71.7.0.255"
+    name: "Current L3"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    device_class: current
+    state_class: measurement
+    filters:
+      multiply: 0.01
+
+  # ---------- Leistungsfaktor ----------
+  - platform: dlms_meter
+    obis_code: "1.1.13.7.0.255"
+    name: "Power Factor"
+    accuracy_decimals: 3
+    device_class: power_factor
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.33.7.0.255"
+    name: "Power Factor L1"
+    accuracy_decimals: 3
+    device_class: power_factor
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.53.7.0.255"
+    name: "Power Factor L2"
+    accuracy_decimals: 3
+    device_class: power_factor
+    state_class: measurement
+
+  - platform: dlms_meter
+    obis_code: "1.1.73.7.0.255"
+    name: "Power Factor L3"
+    accuracy_decimals: 3
+    device_class: power_factor
+    state_class: measurement
+
+text_sensor:
+  - platform: dlms_meter
+    obis_code: "0.1.1.0.0.255"
+    name: "Meter Timestamp"
